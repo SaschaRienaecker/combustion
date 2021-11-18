@@ -1,2 +1,26 @@
-*.pdf
+# ignore jupyter notebook checkpoints
+.ipynb_checkpoints
 
+# ignore __pycache__
+__pycache__
+
+# ignore images
+# *.jpg
+# *.png
+# *.jpeg
+# *.gif
+
+# ignore pdfs
+# *.pdf
+
+# ignore what latex produces
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.log
+*.out
+*.xml
+*.toc
+*.nav
+*.snm
