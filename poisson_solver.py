@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 @jit(nopython=True)
-def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4):
+def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
     """
     Solve the elliptic pressure equation (formally identical to te Poisson eq.):
     ΔP = b (Δ is normalized 2D Laplace operator discretized using centered
@@ -33,15 +33,20 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4):
         _b = 0
         dP = 0
 
+        # to test the 2D Poisson situation we used these BCs:
+        # if i==N-1:
+        #     dP = 4 * 45
+        # elif i==0:
+        #     dP = 4 * 10
+
+        # in this problem, we have:
         # P=0 at right border
-        if i==N-1:
-            dP = 4 * 45
-        elif i==0:
-            dP = 4 * 10
+        if i==0:
+            dP = 0
 
         # Neumann at other borders:
-        #elif i==0:
-        #    dP = 4 * Pact[i+1,j]
+        elif i==N-1:
+            dP = 4 * Pact[i-1,j]
         elif j==0:
             dP = 4 * Pact[i,j+1]
         elif j==M-1:
@@ -51,6 +56,7 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4):
             _b = b[i,j]
         return dP, _b
 
+    n = 0
     while True:
         Pold = np.copy(Pact) # needed to check the convergence
 
@@ -67,4 +73,9 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4):
 
         if converged(Pold, Pact):
             break
+        if n > maxit:
+            print('did not converge within the maximum number of iterations')
+            break
+        n += 1
+
     return Pact
