@@ -1,13 +1,7 @@
-<<<<<<< HEAD
-*.pdf
-*.avi
-test.py
 testing.ipynb
 
-=======
 # ignore jupyter notebook checkpoints
-.ipynb_checkpoints
->>>>>>> b00dd52fb9c387cabea4e6b2061d1b38ac4d354c
+*.ipynb_checkpoints
 
 # ignore __pycache__
 __pycache__
@@ -17,6 +11,7 @@ __pycache__
 # *.png
 # *.jpeg
 # *.gif
+*.avi
 
 # ignore pdfs
 # *.pdf
