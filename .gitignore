@@ -1,8 +1,15 @@
 <<<<<<< HEAD
 *.pdf
 *.avi
+*.gif
+*.png
+*.jpg
+saver.py
 test.py
 testing.ipynb
+*.pyc
+*.p
+
 
 =======
 # ignore jupyter notebook checkpoints
