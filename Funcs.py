@@ -27,6 +27,25 @@ def diff(tn:float, u:np.array, **kwargs):
       df2_2(u,dx,axis=0)+
       df2_2(u,dy,axis=1)
       )
+def conv_x_diff(tn:float, u:np.array, **kwargs):
+    v  = kwargs['v'] 
+    dx = kwargs['dx'] 
+    dy = kwargs['dy'] 
+    nu = kwargs['nu'] 
+    y= -(u * df1_2(u,dx,axis=0)+ v * df1_2(u,dy,axis=1))+nu*(
+      df2_2(u,dx,axis=0)+
+      df2_2(u,dy,axis=1)
+      )
+    return y
+def conv_y_diff(tn:float, v:np.array, **kwargs):
+    u  = kwargs['u'] 
+    dx = kwargs['dx'] 
+    dy = kwargs['dy'] 
+    nu = kwargs['nu'] 
+    return -(u * df1_2(v,dx,axis=0)+ v * df1_2(v,dy,axis=1))+nu*(
+      df2_2(v,dx,axis=0)+
+      df2_2(v,dy,axis=1)
+      )
 
 def u_st1(u:np.array,v:np.array,dx:float,dy:float,dt:float):
     u1 = RK33(conv_x,0,u ,dt ,v=v ,dx=dx,dy=dy)
@@ -38,25 +57,67 @@ def u_st2(u:np.array,v:np.array,dx:float,dy:float,dt:float,nu:float):
     u2 = RK33(diff  ,0 ,u1,dt,dx=dx, dy=dy, nu=nu)
     v2 = RK33(diff  ,0 ,v1,dt,dx=dx, dy=dy, nu=nu)
     return u2,v2
+
+def u_dir(u:np.array,v:np.array,dx:float,dy:float,dt:float,nu:float):
+    u = RK33(conv_x_diff,0,u ,dt ,v=v ,dx=dx,dy=dy,nu = nu)
+    v = RK33(conv_y_diff,0,v ,dt ,u=u ,dx=dx,dy=dy,nu = nu)
+    return [u,v]
     
 
 
 
 
 def df1_1(data:np.array,dh:float,axis:int=0):
-    return (np.roll(data, 1, axis=axis) 
-            -np.roll(data, 0, axis=axis))/(dh)
-def df1_2(data:np.array,dh:float,axis:int=0) :
-    return (np.roll(data, 1, axis=axis) 
-            -np.roll(data, -1, axis=axis))/(2*dh)
-def df1_4(data:np.array,dh:float,axis:int=0) :
-        return (np.roll(data,-2, axis=axis) 
-            - 8*np.roll(data,-1, axis=axis) 
-            + 8*np.roll(data, 1, axis=axis) 
-            -   np.roll(data, 2, axis=axis))/(12*dh)
+    # return (np.roll(data, 1, axis=axis) 
+    #         -np.roll(data, 0, axis=axis))/(dh)
+    # without np.roll
+    data_deriv = np.zeros_like(data)
+    N = data.shape[0]
+    M = data.shape[1]
+    if axis == 0:
+        N = data.shape[0]
+        data_deriv[0:N-1,:] = (data[1:N,:] - data[0:N-1,:])/dh 
+    elif axis == 1:
+        N = data.shape[1]
+        data_deriv[:,0:N-1] = (data[:,0:N] - data[:,0:N-1])/dh
+    return data_deriv
 
+def df1_2(data:np.array,dh:float,axis:int=0) :
+    # return (np.roll(data, 1, axis=axis) 
+    #         -np.roll(data, -1, axis=axis))/(2*dh)
+    data_deriv = np.zeros_like(data)
+    if axis == 0:
+        N = data.shape[0]
+        data_deriv[1:N-1,:] = (data[2:N,:] - data[0:N-2,:])/(2*dh) 
+    elif axis == 1:
+        N = data.shape[1]
+        data_deriv[:,1:N-1] = (data[:,2:N] - data[:,0:N-2])/(2*dh)
+    return data_deriv
+    
+def df1_4(data:np.array,dh:float,axis:int=0) :
+        # return (np.roll(data,-2, axis=axis) 
+        #     - 8*np.roll(data,-1, axis=axis) 
+        #     + 8*np.roll(data, 1, axis=axis) 
+        #     -   np.roll(data, 2, axis=axis))/(12*dh)
+        data_deriv = np.zeros_like(data)
+        if axis == 0:
+            N = data.shape[0]
+            data_deriv[2:N-2,:] = (data[0:N-4,:] - 8 * data[1:N-3,:] + 8 * data[3:N-1,:] - data[4:N  ,:] )/(12*dh) 
+        elif axis == 1:
+            N = data.shape[1]
+            data_deriv[:,2:N-2] = (data[:,0:N-4] - 8 * data[:,1:N-3] + 8 * data[:,3:N-1] - data[:  ,4:N] )/(12*dh)
+        return data_deriv
+    
 def df2_2(data:np.array,dh:float,axis:int=0):
-    return (np.roll(data,1,axis=axis) - 2* np.roll(data,0,axis=axis) +np.roll(data,-1,axis=axis))/dh**2
+    # return (np.roll(data,1,axis=axis) - 2* np.roll(data,0,axis=axis) +np.roll(data,-1,axis=axis))/dh**2
+    data_deriv = np.zeros_like(data)
+    if axis == 0:
+        N = data.shape[0]
+        data_deriv[1:N-1,:] = (data[2:N,:] - 2 * data[1:N-1,:] + data[0:N-2  ,:])/(dh**2) 
+    elif axis == 1:
+        N = data.shape[1]
+        data_deriv[:,1:N-1] = (data[:,2:N] - 2 * data[:,1:N-1] + data[:,0:N-2])/(dh**2)
+    return data_deriv
 
 
 
@@ -87,7 +148,6 @@ def RK44(func:callable,tn:float,yn:np.array,dh:float,**kwargs):
                     2*k2+
                     2*k3+
                     k4)
-
 def means(data_cube):
     means =[]
     for i in range(len(data_cube)):
@@ -97,8 +157,7 @@ def means(data_cube):
 
 
 
-def save(data_cube,update_func,fig,Dt,dt,file_type='avi'):
-
+def save(data_cube,update_func,fig,Dt,dt,file_type='avi',fargs=None):
     if True: #just for naming the gif file
         dirs = listdir('./')
         gifs = []
@@ -115,8 +174,13 @@ def save(data_cube,update_func,fig,Dt,dt,file_type='avi'):
         writer = animation.writers['ffmpeg']
         writer = writer(fps=60, metadata=dict(artist='Slimane MZERGUAT'), bitrate=1800)
 
-    ani = animation.FuncAnimation(fig, update_func, interval=0.1, blit=True, frames=len(data_cube))#len(data_cube)-1)
+    # ani = animation.FuncAnimation(fig, update_func, interval=0.001, blit=True, frames=len(data_cube))#len(data_cube)-1)
+    # plt.show()
+    #for quiver
+    ani = animation.FuncAnimation(fig, update_func, fargs=fargs, interval=0.1, blit=True, frames=len(data_cube[3]))#len(data_cube)-1)
+    
     #ani.save(f, writer=writergif)
+    print(f)
     ani.save(f, writer=writer)
     
 def example():    
