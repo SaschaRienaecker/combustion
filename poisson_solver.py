@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 @jit(nopython=True)
-def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
+def SOR_solver(b, Pprev=None, w=1.5, rtol=1e-4, atol=1e-4, maxit=1000000):
     """
     Solve the elliptic pressure equation (formally identical to te Poisson eq.):
     ΔP = b (Δ is normalized 2D Laplace operator discretized using centered
@@ -13,6 +13,7 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
     """
 
     N,M = b.shape
+
 
     # if the pressure field at the previous iteration is not too different,
     # the algorithm might converge faster
@@ -39,14 +40,14 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
         # elif i==0:
         #     dP = 4 * 10
 
-        # in this problem, we have:
-        # P=0 at right border
-        if i==0:
+        #in this problem, we have:
+        #P=0 at right border
+        if i==N-1:
             dP = 0
 
         # Neumann at other borders:
-        elif i==N-1:
-            dP = 4 * Pact[i-1,j]
+        elif i==0:
+            dP = 4 * Pact[i+1,j]
         elif j==0:
             dP = 4 * Pact[i,j+1]
         elif j==M-1:
