@@ -7,6 +7,8 @@ from typing import Callable
 from os import listdir
 from numba import jit
 
+
+
 def conv_x(tn:float, u:np.array,**kwargs):
     v  = kwargs['v']
     dx = kwargs['dx']
@@ -106,6 +108,7 @@ def df1_4(data:np.array,dh:float,axis:int=0) :
             data_deriv[:,2:N-2] = (data[:,0:N-4] - 8 * data[:,1:N-3] + 8 * data[:,3:N-1] - data[:  ,4:N] )/(12*dh)
         return data_deriv
 
+@jit(nopython=True)
 def df2_2(data:np.array,dh:float,axis:int=0):
     # return (np.roll(data,1,axis=axis) - 2* np.roll(data,0,axis=axis) +np.roll(data,-1,axis=axis))/dh**2
     data_deriv = np.zeros_like(data)
