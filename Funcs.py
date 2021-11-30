@@ -214,6 +214,29 @@ def example():
     return ures,vres
 
 
+#### Functions implemented by Sascha for the species transport (tested with numba) ####
+
+@jit(nopython=True)
+def RK4(p, dt, F, *args):
+    k1 = F(p, *args)
+    k2 = F(p + dt /2 * k1, *args)
+    k3 = F(p + dt /2 * k2, *args)
+    k4 = F(p + dt * k3, *args)
+    return p + dt * (k1/6 + k2/3 + k3/3 + k4/6)
+
+@jit(nopython=True)
+def adv_diff(p, u, v, dx, dy, nu):
+    return -(u * df1_2(p,dx,axis=0)+ v * df1_2(p,dy,axis=1)) + nu*(
+      df2_2(p,dx,axis=0)+
+      df2_2(p,dy,axis=1)
+      )
+
+@jit(nopython=True)
+def advance_adv_diff(p, dt, u, v, dx, dy, nu):
+    args = (u, v, dx, dy, nu)
+    return RK4(p, dt, adv_diff, *args)
+
+
 
 
 # def df1_1(data,dh, axis=0):
