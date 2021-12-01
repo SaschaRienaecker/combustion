@@ -4,7 +4,9 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from typing import Callable
+from poisson_solver import SOR_solver
 from os import listdir
+
 
                      
 def conv_x(tn:float, u:np.array,**kwargs):

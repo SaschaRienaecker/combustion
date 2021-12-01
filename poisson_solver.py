@@ -1,7 +1,6 @@
 import numpy as np
 from numba import jit
 
-@jit(nopython=True)
 def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
     """
     Solve the elliptic pressure equation (formally identical to te Poisson eq.):
