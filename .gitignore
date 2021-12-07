@@ -2,7 +2,6 @@
 *.pdf
 saver.py
 test.py
-testing.ipynb
 *.pyc
 *.p
 
