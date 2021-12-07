@@ -8,13 +8,6 @@ from poisson_solver import SOR_solver
 from os import listdir
 from numba import jit
 
-
-
-<<<<<<< HEAD
-
-                     
-=======
->>>>>>> c738fe7c8fd9d85b258965e483e6d503e36aa5c9
 def conv_x(tn:float, u:np.array,**kwargs):
     v  = kwargs['v']
     dx = kwargs['dx']
@@ -164,7 +157,7 @@ def means(data_cube):
 
 
 
-def save(data_cube,update_func,fig,Dt,dt,file_type='avi',fargs=None):
+def save(data_cube,update_func,fig,file_type='avi',fargs=None):
     if True: #just for naming the gif file
         dirs = listdir('./')
         gifs = []

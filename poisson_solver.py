@@ -1,12 +1,7 @@
 import numpy as np
 from numba import jit
 
-<<<<<<< HEAD
 def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
-=======
-@jit(nopython=True)
-def SOR_solver(b, Pprev=None, w=1.5, rtol=1e-4, atol=1e-4, maxit=1000000):
->>>>>>> c738fe7c8fd9d85b258965e483e6d503e36aa5c9
     """
     Solve the elliptic pressure equation (formally identical to te Poisson eq.):
     ΔP = b (Δ is normalized 2D Laplace operator discretized using centered
