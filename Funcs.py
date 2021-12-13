@@ -216,6 +216,13 @@ def example():
 #### Functions implemented by Sascha for the species transport (tested with numba) ####
 
 @jit(nopython=True)
+def RK3(p, dt, F, *args):
+    k1 = F(p, *args)
+    k2 = F(p + dt /2 * k1, *args)
+    k3 = F(p - dt * k1 + 2 * dt * k2, *args)
+    return p + dt * (k1/6 + 2*k2/3 + k3/6)
+
+@jit(nopython=True)
 def RK4(p, dt, F, *args):
     k1 = F(p, *args)
     k2 = F(p + dt /2 * k1, *args)
@@ -231,60 +238,11 @@ def adv_diff(p, u, v, dx, dy, nu):
       )
 
 @jit(nopython=True)
-def advance_adv_diff(p, dt, u, v, dx, dy, nu):
+def advance_adv_diff_RK3(p, dt, u, v, dx, dy, nu):
+    args = (u, v, dx, dy, nu)
+    return RK3(p, dt, adv_diff, *args)
+
+@jit(nopython=True)
+def advance_adv_diff_RK4(p, dt, u, v, dx, dy, nu):
     args = (u, v, dx, dy, nu)
     return RK4(p, dt, adv_diff, *args)
-
-
-
-
-# def df1_1(data,dh, axis=0):
-# # size = data.shape
-#     # print(size)
-#     # data1 = np.zeros(size) *np.NaN
-#     # print(data1.shape)
-
-#     # if axis == 0:
-#     #     data1[  0:size[0]-1] = (data[1  :size[0]] - data[  0:size[0]-1])/dh
-#     # elif axis == 1:
-#     #     data1[:,0:size[1]-1] = (data[:,1:size[1]] - data[:,0:size[0]-1])/dh
-#     # return data1
-#     size = data.shape
-#     if axis == 0:
-#         return (data[1  :size[0]] - data[  0:size[0]-1])/dh
-#     elif axis == 1:
-#         return (data[:,1:size[1]] - data[:,0:size[1]-1])/dh
-
-
-# def df1_4(data,dh,axis=0) :
-#     # return (np.roll(data,-2, axis=axis)
-#     #     - 8*np.roll(data,-1, axis=axis)
-#     #     + 8*np.roll(data, 1, axis=axis)
-#     #     -   np.roll(data, 2, axis=axis))/(12*dh)
-
-#     size = data.shape
-#     if axis == 0:
-#         return (data[0  :size[0]-4]
-#             -8* data[1  :size[0]-3]
-#             +8* data[3  :size[0]-1]
-#             -   data[4  :size[0]  ])/(12*dh)
-
-#     elif axis == 1:
-#         return (data[:,0  :size[1]-4]
-#             -8* data[:,1  :size[1]-3]
-#             +8* data[:,3  :size[1]-1]
-#             -   data[:,4  :size[1]  ])/(12*dh)
-
-# # def df2_2(data,dh,axis=0):
-# #     return (np.roll(data,1,axis=axis) - 2* np.roll(data,0,axis=axis) +np.roll(data,-1,axis=axis))/dh**2
-# #     if axis == 0
-# #     return (data[0  :size[0]-4]
-# #             -8* data[1  :size[0]-3]
-# #             +8* data[3  :size[0]-1]
-# #             -   data[4  :size[0]  ])/(12*dh)
-
-# #     elif axis == 1:
-# #         return (data[:,0  :size[1]-4]
-# #             -8* data[:,1  :size[1]-3]
-# #             +8* data[:,3  :size[1]-1]
-# #             -   data[:,4  :size[1]  ])/(12*dh)

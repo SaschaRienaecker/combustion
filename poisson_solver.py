@@ -10,7 +10,7 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
     The algorithm usese the SOR method seen in the lectures.
     The BCs are chosen such that P=0 at the right boundary and V.Neumann
     conditions an all other boundaries.
-    
+
     """
 
     N,M = b.shape
