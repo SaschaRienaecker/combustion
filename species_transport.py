@@ -1,5 +1,26 @@
 from numba import jit
+from scipy.constants import N_A ,m_p
+from numpy import exp
+import numpy as np
+
 from parameters import *
+
+species_names = ['CH$_4$', 'O$_2$', 'N$_2$',  'H$_2$O', 'CO$_2$']
+
+mH = 1.0079
+mO = 16.000
+mC = 12.0107
+mN = 14.0067
+
+# molar masses
+W = np.array([mC + 4*mH, 2*mO, 2*mN, 2*mH+mO, mC+2*mO]) * 1e-3 # kg/mol
+
+# enthalpy of formation
+dh0 = np.array([-74.9, 0, 0, -241.818, -393.52]) * 1e3 # J/mol
+
+# stochiomteric coefficients
+nu_stoch = np.array([-1, -2, 0, 2, 1], dtype=float)
+
 
 @jit(nopython=True)
 def set_CH4_BC(Y_CH4):
@@ -109,3 +130,21 @@ def set_Temp_BC(Temp):
         Temp[:Nc_lw, j] = 300 # Kelvin
 
     return Temp
+
+@jit(nopython=True)
+def Y_to_n(Y):
+    """Converts mass fraction Y to volumic density n in mol/m⁻³."""
+    n = np.zeros_like((Y))
+    nspec = Y.shape[0]
+    for k in range(nspec):
+        n[k] = Y[k] * rho / W[k]
+
+    return n
+
+@jit(nopython=True)
+def get_Q(n_CH4, n_O2, T, TA=1e4):
+    """
+    Express the densities of CH4 and O2 in m⁻³, Temperature T in Kelvin.
+    """
+    A = 1.1e8
+    return A * n_CH4 * n_O2**2 * exp(- TA / T)

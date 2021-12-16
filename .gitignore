@@ -1,4 +1,5 @@
 
+*.npy
 *.pdf
 saver.py
 test.py
