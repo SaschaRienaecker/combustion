@@ -125,23 +125,46 @@ if False: #generating stationary velocity field
 
 #animation comes after
 def update(frame):
-    ln.set_UVC(U[frame].T, V[frame].T)
-    # ln[1].set_data([V[frame]**2+U[frame]**2])
-    return ln,
+    # ln[1].set_data(V[frame].T**2+U[frame].T**2)
+    ln[0].set_UVC(U[frame*50].T, V[frame*50].T)
+    ln[1].set_array(V[frame*50].T**2+U[frame*50].T**2)
+    ln[2].set_text('${:05.1f}\\mu s$'.format(frame*50*0.1))
+    return ln
 
 
-if True: #Analysing the results and generating video
+if False: #Analysing the results and generating video
     #saving a video
     U,V = pickle.load(open("U_V_field-std_0.01.p","rb"))
-    fig, ax = plt.subplots()
-    ln1 = ax.quiver(U[0].T, V[0].T,scale=40)
+    fig, ax = plt.subplots(figsize=(16,16))
+    ln1  = ax.quiver(U[0].T   ,V[0].T   ,scale=40,zorder=2)
+    ln2  = ax.pcolormesh(U[0].T**2+V[0].T**2,zorder=1,vmin=0,vmax=1.75,cmap='rainbow')
+    txt = ax.text(25,25,'$0\\mu s$',zorder=3,fontsize = 32)
+    ax.set_xticklabels(ax.get_xticks()/N)
+    ax.set_yticklabels(ax.get_yticks()/N)
+    cbar = fig.colorbar(ln2,ax=ax)
+    ln = [ln1,ln2,txt]
 
-    # ln2 = ax.imshow(U[0]**2+V[0]**2)
-    ln = ln1#[ln1,ln2]
-
-    plt.rcParams['animation.ffmpeg_path'] = r'C:\Users\hp\Documents\ffmpeg-2021-10-18-git-d04c005021-full_build\bin/ffmpeg.exe'
+    ax.set_title("energie and direction evolution \nof the velocity until stability$ \\mu s$",fontsize = 32)
+    ax.set_ylabel('y-direction (mm)',fontsize = 32)
+    ax.set_xlabel('x-direction (mm)',fontsize = 32)
+    plt.rcParams['animation.ffmpeg_path'] = r"C:\ffmpeg-N-99920-g46e362b765-win64-gpl-shared-vulkan\bin\ffmpeg.exe"
     writer = animation.writers['ffmpeg']
     writer = writer(fps=60, metadata=dict(artist='Slimane MZERGUAT'), bitrate=1800)
-    ani = FuncAnimation(fig, update, blit=True, frames=10000,interval=0.1,repeat=False)
+    ani = FuncAnimation(fig, update, blit=True, frames=int(len(U)/50),interval=18,repeat=False)
     ani.save("res.mp4", writer=writer)
+    plt.show()
+if True:# fluctuation analysis
+    U,V = pickle.load(open("U_V_field-std_0.01.p","rb"))
+    plt.plot(np.arange(0,len(U)-1)*0.1,
+        np.mean(np.nan_to_num(
+            np.abs((U[0:-1]-U[1:]))*2/np.abs(U[0:-1]+U[1:]),nan=0),axis=(1,2))
+        +
+        np.mean(np.nan_to_num(
+            np.abs((V[0:-1]-V[1:]))*2/np.abs(V[0:-1]+V[1:]),nan=0),axis=(1,2)
+        ))
+
+    plt.yscale('log')
+    plt.xlabel("time $(\\mu s)$",fontsize = 32)
+    plt.ylabel('fluctuation amount',fontsize = 32)
+    plt.title('quantifying the variability of the grid with time\n$\\langle\\delta r\\rangle^{x,y} = \\langle\\frac{2\\cdot|v_i-v_{i+1}|}{|v_i|+|v_{i+1}|}\\rangle^{x,y}$',fontsize = 32)
     plt.show()
