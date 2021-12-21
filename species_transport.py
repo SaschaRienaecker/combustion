@@ -131,6 +131,10 @@ def set_Temp_BC(Temp):
 
     return Temp
 
+# group the boundary conditions (respecting the chosen species ordering)
+BCs = [set_CH4_BC, set_O2_BC, set_N2_BC, set_H2O_BC, set_CO2_BC]
+
+
 @jit(nopython=True)
 def Y_to_n(Y):
     """Converts mass fraction Y to volumic density n in mol/m⁻³."""
@@ -148,3 +152,64 @@ def get_Q(n_CH4, n_O2, T, TA=1e4):
     """
     A = 1.1e8
     return A * n_CH4 * n_O2**2 * exp(- TA / T)
+
+@jit(nopython=True)
+def advance_chem(Y,T,dt_chem):
+    n = Y_to_n(Y)
+    Q = get_Q(n[0], n[1], T)
+    nspec = Y.shape[0]
+    omega_dot = np.zeros(nspec)
+    for k in range(nspec):
+        omega_dot[k] = W[k] * nu_stoch[k] * Q
+        Y[k] += dt_chem * omega_dot[k] / rho
+
+    omegaT_dot = - np.sum(dh0 / W * omega_dot)
+    T += dt_chem * omegaT_dot / rho / cp
+    return Y,T
+
+@jit(nopython=True)
+def integr_chem_0d(Y, T, dt, Nt_chem):
+    """
+    Integration of the chemistry equations for the homogeneous reactor.
+    Args:
+        - Y:  mass fraction of species k
+        - T:  Temperature in K
+        - dt: integrates the chemical equation from t to t+dt
+        - Nt_chem: number of time steps for the integration (dt_chem = dt/Nt_chem)
+    """
+    dt_chem = dt / Nt_chem
+
+    T_t = np.zeros(Nt_chem)
+    for n in range(Nt_chem):
+        T_t[n] = T
+        Y,T = advance_chem(Y,T,dt_chem)
+    return Y, T_t
+
+@jit(nopython=True)
+def integr_chem_2d(Y, T, dt, Nt_chem, evolve_T=True):
+    """
+    Integration of the chemistry equations for the whole chamber.
+    Args:
+        - Y:  mass fraction of species k
+        - T:  Temperature in K
+        - dt: integrates the chemical equation from t to t+dt
+        - Nt_chem: number of time steps for the integration (dt_chem = dt/Nt_chem)
+    """
+    dt_chem = dt / Nt_chem
+
+    for n in range(Nt_chem):
+        n = Y_to_n(Y)
+        Q = get_Q(n[0], n[1], T)
+        omega_dot = np.zeros_like(Y)
+        nspec = Y.shape[0]
+        for k in range(nspec):
+            omega_dot[k] = W[k] * nu_stoch[k] * Q
+            Y[k] += dt_chem * omega_dot[k] / rho
+
+        if evolve_T:
+            omegaT_dot = np.zeros_like(T)
+            for k in range(nspec):
+                omegaT_dot -= dh0[k] / W[k] * omega_dot[k]
+            T += dt_chem * omegaT_dot / rho / cp
+
+    return Y, T
