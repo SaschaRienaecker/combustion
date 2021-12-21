@@ -177,20 +177,30 @@ if False: #Analysing the results and generating video
     ani = FuncAnimation(fig, update, blit=True, frames=int(len(U)/50),interval=200,repeat=False)#int(len(U)/50)
     ani.save("res.mp4", writer=writer)
     plt.show()
-if False:# fluctuation analysis
-    U,V = pickle.load(open("U_V_field-std_0.01.p","rb"))
-    plt.plot(np.arange(0,len(U)-1)*0.1,
-        np.mean(np.nan_to_num(
+if True:# fluctuation analysis
+    U,V,Pr = pickle.load(open("U_V_field-std_0.01.p","rb"))
+    pickle.dump(np.array([U[-1],V[-1],Pr[-1]]),open("u_v_p_t={}ms_(0.01-stationary)".format(U.shape[0]*dt*1000),"wb"))
+    means = (np.mean(np.nan_to_num(
             np.abs((U[0:-1]-U[1:]))*2/np.abs(U[0:-1]+U[1:]),nan=0),axis=(1,2))
         +
         np.mean(np.nan_to_num(
             np.abs((V[0:-1]-V[1:]))*2/np.abs(V[0:-1]+V[1:]),nan=0),axis=(1,2)
         ))
 
+    flattening_order = 1000
+    sums = np.zeros((U.shape[0]-flattening_order))
+    for i in range(flattening_order):
+        sums=sums+  means[flattening_order-i-1:means.shape[0]-i]
+    sums/=flattening_order
+    plt.plot((np.arange(0,len(U)-flattening_order)+flattening_order/2)*0.1,
+        sums
+        )
+    
+
     plt.yscale('log')
     plt.xlabel("time $(\\mu s)$",fontsize = 32)
     plt.ylabel('fluctuation amount',fontsize = 32)
-    plt.title('quantifying the variability of the grid with time\n$\\langle\\delta r\\rangle^{x,y} = \\langle\\frac{2\\cdot|v_i-v_{i+1}|}{|v_i|+|v_{i+1}|}\\rangle^{x,y}$',fontsize = 32)
+    plt.title('quantifying the variability of the grid with time flattened over {:06.2f}'.format(round(flattening_order*dt*10**6,2)) +'$\mu s$\n$\\langle\\delta r\\rangle^{x,y} = \\langle\\frac{2\\cdot|v_i-v_{i+1}|}{|v_i|+|v_{i+1}|}\\rangle^{x,y}$',fontsize = 32)
     plt.show()
 
 if False:#studying the parameters at the boundary at stability 
