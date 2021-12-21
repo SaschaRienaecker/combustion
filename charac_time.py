@@ -120,6 +120,7 @@ def advance_fluid_flow(st_ratio:float, u, v, f, dt):
 if False: #generating stationary velocity field
     U, V,Pr = advance_fluid_flow(0.001, u, v, advance_adv_diff_RK3, dt)
     pickle.dump([U,V,Pr],open("U_V_field-std_0.01.p",'wb'))
+    pickle.dump(np.array([U[-1],V[-1],Pr[-1]]),open("u_v_p_t={}ms_(0.01-stationary)".format(U.shape[0]*dt*1000),"wb"))
     fig, ax = plt.subplots(figsize=(4,4))
     ax.quiver(U[-1].T, V[-1].T)
     ax.set_title('velocity field')
@@ -177,9 +178,8 @@ if False: #Analysing the results and generating video
     ani = FuncAnimation(fig, update, blit=True, frames=int(len(U)/50),interval=200,repeat=False)#int(len(U)/50)
     ani.save("res.mp4", writer=writer)
     plt.show()
-if True:# fluctuation analysis
+if False:# fluctuation analysis
     U,V,Pr = pickle.load(open("U_V_field-std_0.01.p","rb"))
-    pickle.dump(np.array([U[-1],V[-1],Pr[-1]]),open("u_v_p_t={}ms_(0.01-stationary)".format(U.shape[0]*dt*1000),"wb"))
     means = (np.mean(np.nan_to_num(
             np.abs((U[0:-1]-U[1:]))*2/np.abs(U[0:-1]+U[1:]),nan=0),axis=(1,2))
         +
