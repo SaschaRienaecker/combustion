@@ -21,9 +21,18 @@ dh0 = np.array([-74.9, 0, 0, -241.818, -393.52]) * 1e3 # J/mol
 # stochiomteric coefficients
 nu_stoch = np.array([-1, -2, 0, 2, 1], dtype=float)
 
+# group the boundary conditions (respecting the chosen species ordering)
+@jit(nopython=True)
+def set_BCs(Y, Ns_c, Nc_lw):
+    Y[0,:] = set_CH4_BC(Y[0,:], Ns_c, Nc_lw)
+    Y[1,:] = set_O2_BC(Y[1,:],  Ns_c, Nc_lw)
+    Y[2,:] = set_N2_BC(Y[2,:],  Ns_c, Nc_lw)
+    Y[3,:] = set_H2O_BC(Y[3,:], Ns_c, Nc_lw)
+    Y[4,:] = set_CO2_BC(Y[4,:], Ns_c, Nc_lw)
+    return  Y
 
 @jit(nopython=True)
-def set_CH4_BC(Y_CH4):
+def set_CH4_BC(Y_CH4, Ns_c, Nc_lw):
 
     # set to Neumann BC first everywhere:
     Y_CH4[0,:]  = Y_CH4[1,:]
@@ -42,7 +51,7 @@ def set_CH4_BC(Y_CH4):
     return Y_CH4
 
 @jit(nopython=True)
-def set_O2_BC(Y_O2):
+def set_O2_BC(Y_O2, Ns_c, Nc_lw):
 
     # set to Neumann BC first everywhere:
     Y_O2[0,:]  = Y_O2[1,:]
@@ -61,7 +70,7 @@ def set_O2_BC(Y_O2):
     return Y_O2
 
 @jit(nopython=True)
-def set_N2_BC(Y_N2):
+def set_N2_BC(Y_N2, Ns_c, Nc_lw):
 
     # set to Neumann BC first everywhere:
     Y_N2[0,:]  = Y_N2[1,:]
@@ -81,7 +90,7 @@ def set_N2_BC(Y_N2):
     return Y_N2
 
 @jit(nopython=True)
-def set_CO2_BC(Y_CO2):
+def set_CO2_BC(Y_CO2, Ns_c, Nc_lw):
 
     # set to Neumann BC first everywhere:
     Y_CO2[0,:]  = Y_CO2[1,:]
@@ -99,7 +108,7 @@ def set_CO2_BC(Y_CO2):
     return Y_CO2
 
 @jit(nopython=True)
-def set_H2O_BC(Y_H2O):
+def set_H2O_BC(Y_H2O, Ns_c, Nc_lw):
 
     # set to Neumann BC first everywhere:
     Y_H2O[0,:]  = Y_H2O[1,:]
@@ -117,7 +126,7 @@ def set_H2O_BC(Y_H2O):
     return Y_H2O
 
 @jit(nopython=True)
-def set_Temp_BC(Temp):
+def set_Temp_BC(Temp, Ns_c, Nc_lw):
 
     # set to Neumann BC first everywhere:
     Temp[0,:]  = Temp[1,:]

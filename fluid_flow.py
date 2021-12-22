@@ -1,14 +1,12 @@
 import numpy as np
 from numba import jit
-from parameters import *
-from numpy import pi, sin
+from parameters import nu, Uslot, Ucoflow, rho, set_resolution
+from math import pi, sin
 from Funcs import df1_2, df1_2
 from poisson_solver import SOR_solver
 
-w = 2 / (1 + sin(pi/N)) # optimal SOR parameter in the symmatrical case NxN
-
 @jit(nopython=True)
-def set_boundary(u,v):
+def set_boundary(u,v, Ns_c, Nc_lw):
 
     #left wall (slipping)
     u[0,:] = 0
@@ -31,36 +29,49 @@ def set_boundary(u,v):
     v[Nc_lw:,-1] = 0
 
     # right gaz outlet (forced steady-state --> Neumann BC)
-    u[M-1,:] = u[M-2,:]
-    v[M-1,:] = v[M-2,:]
+    u[-1,:] = u[-2,:]
+    v[-1,:] = v[-2,:]
 
     return u,v
 
 
 @jit(nopython=True)
-def compute_P(u, v, dx, dt, rho, Pprev=None):
+def compute_P(u, v, dx, dt, rho, Pprev=None, w=1.5, atol=1e-4):
     # no need to compute dvdx or dudy
     dudx = df1_2(u, dx, axis=0)
     dvdy = df1_2(v, dx, axis=1)
     b = dx**2 * rho / dt * (dudx + dvdy)
 
-    return SOR_solver(b, Pprev=Pprev, w=w, maxit=10000)
+    return SOR_solver(b, Pprev=Pprev, w=w, atol=atol, maxit=10000)
 
 @jit(nopython=True)
-def advance_fluid_flow(Nt, u, v, f, dt):
+def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None):
     """
-    f: Time integration function, e.g. advance_adv_diff_RK3
+    Evolve the fluid velocities u,v, according the incompressible N.-V.-Eqs
+    over Nt time steps of duration dt.
+    Note: the first time this function is executed takes long since numba needs to compile a lot).
+    Args:
+    - f: Time integration function, e.g. advance_adv_diff_RK3
+    - P: Initial pressure field. Defaults to zeros if not provided.
     """
-    P = np.zeros_like(u)
+    if P is None:
+        P = np.zeros_like(u)
+
+    N, M = u.shape
+
+    dx, dy, Ns_c, Nc_lw = set_resolution(N,M)
+
+    if w is None:
+        w = 2 / (1 + sin(pi/N)) # optimal SOR parameter in the symmatrical case NxN
 
     for n in range(Nt):
 
         u = f(u, dt, u, v, dx, dy, nu)
         v = f(v, dt, u, v, dx, dy, nu)
-        u,v = set_boundary(u,v)
+        u,v = set_boundary(u,v, Ns_c, Nc_lw)
 
         # NOTE: using Pprev here increases Poisson solver convergence speed a lot!
-        P = compute_P(u, v, dx, dt, rho, Pprev=P)
+        P = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol)
 
         # third step (P)
         dPdx = df1_2(P, dx, axis=0)
@@ -71,4 +82,14 @@ def advance_fluid_flow(Nt, u, v, f, dt):
 
         # apply BCs one more at the end?
         #u,v = set_boundary(u,v)
-    return u, v
+    return u, v, P
+
+def dt_fluid_flow(dx, Fo=0.3):
+    """
+    The stability threshold is found to be dt = 4e-5 for N,M=(50,50) i.e. dx=4e-5.
+    It scales reliably as the inverse of dx² across many different N€[25;200].
+    We can therefore define a Fourier number Fo=0.375
+    (or slightly smaller to be absolutely safe) to get dt as a function of dx.
+    """
+    dt = dx**2 / nu * Fo
+    return dt

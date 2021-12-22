@@ -246,3 +246,17 @@ def advance_adv_diff_RK3(p, dt, u, v, dx, dy, nu):
 def advance_adv_diff_RK4(p, dt, u, v, dx, dy, nu):
     args = (u, v, dx, dy, nu)
     return RK4(p, dt, adv_diff, *args)
+
+
+@jit(nopython=True)
+def diffusion(p, dx, dy, nu):
+    """ Purely diffusive case for testing purposes. """
+    return nu*(
+    df2_2(p,dx,axis=0)+
+    df2_2(p,dy,axis=1)
+    )
+
+@jit(nopython=True)
+def advance_diff_RK3(p, dt, u, v, dx, dy, nu):
+    args = (dx, dy, nu)
+    return RK3(p, dt, diffusion, *args)

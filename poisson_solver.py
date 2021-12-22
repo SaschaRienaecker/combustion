@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 @jit(nopython=True)
-def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
+def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000):
     """
     Solve the elliptic pressure equation (formally identical to te Poisson eq.):
     ΔP = b (Δ is normalized 2D Laplace operator discretized using centered
@@ -15,7 +15,6 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
 
     N,M = b.shape
 
-
     # if the pressure field at the previous iteration is not too different,
     # the algorithm might converge faster
     if Pprev is None:
@@ -25,7 +24,6 @@ def SOR_solver(b, Pprev=None, w=1, rtol=1e-4, atol=1e-4, maxit=1000000):
 
     # the convergence condition (maybe another metric is better/more efficient)
     def converged(V0, V1):
-        # return np.allclose(V0, V1, rtol=rtol, atol=atol) # non jitable
         return np.mean(np.abs(V0-V1)) < atol
 
     def dP_BC(i,j):
