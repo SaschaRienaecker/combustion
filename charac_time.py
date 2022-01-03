@@ -364,7 +364,7 @@ if True:
     """
     N=50
     Dt = 65000* 10**-7 
-    dt_list = [10**-8,10**-7,10**-6,10**-5]
+    dt_list = [10**-2,10**-1]
     #dt_list = [10**-7]
     duration_list=[]
     last_frame_data = []
@@ -398,3 +398,16 @@ if True:
         "info":"dt->time step\nDur->simulation duration\nlstFrame->last frame data\nconv->is convergent"
             } , open("./data/other/dt_vs_Dur+convergence.p","wb"))
 
+if True:
+    res =  pickle.load( open("./data/other/dt_vs_Dur+convergence.p","rb"))
+    plt.loglog(res["dt"],np.abs(res["Dur"]),"o")
+    plt.show()
+    for i in range(len(res["dt"])):
+        fig, ax = plt.subplots()
+        u,v,P = res["lstFrame"][i]
+        ax.quiver(u.T, v.T,zorder=2)
+        ax.pcolormesh(P.T,zorder=1,cmap='rainbow')
+        ax.set_title('velocity field for dt: {:.0e}'.format(res["dt"][i]))
+        ax.set_xlabel('$x$')
+        ax.set_ylabel('$y$')
+        plt.show()
