@@ -12,6 +12,7 @@ import matplotlib.animation as animation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import time
 
+
 N=50;M=50
 dx, dy, Ns_c, Nc_lw = set_resolution(N,M)
 u0 = np.zeros((N,M))
@@ -327,7 +328,7 @@ if False: #following N dependence
             } , open("./N_vs_dt.p","wb"))
 
         
-if True:
+if False:
     # grid_size_list = [30,50,80,100,150,200]
     # dt_list = [46.91230058670044, 57.196611642837524, 175.65559196472168, 297.36701917648315, 836.9873476028442, 1804.0585973262787]
     # pickle.dump({
@@ -335,7 +336,65 @@ if True:
     #     "dt":dt_list
     # } , open("./N_vs_dt.p","wb"))
     plt.figure()
-    res = pickle.load(open("./N_vs_dt.p","rb"))
-    print(res)
+    res = pickle.load(open("./data/other/N_vs_dt.p","rb"))
+    x = np.array(res['N' ])
+    y = np.array(res['dt'])
+    x2,y=x[x>=40],y[x>=40] ; x=x2
+    
+    params = np.polyfit(np.log(x),np.log(y),1)
+    
+    plt.loglog(
+        np.arange(5,200),
+        np.arange(5,200)**params[0]*np.exp(params[1]),
+    label='$fit: dt = {:.2e}\\cdot N^{{+{:4.2f}}}$'.format(np.exp(params[1]),params[0])
+    )
     plt.loglog(res['N'],res['dt'],'o')
+    plt.title('Flow simulation until stationarity as a function of grid size')
+    plt.xlabel('grid size N*N')
+    plt.ylabel('duration [s]')
+    plt.legend()
+    plt.grid()
+    
     plt.show()
+
+if True:
+    """
+    in this part we varie the time step and try to find the best and the most satisfying 
+    dt that gives the promissing results
+    """
+    N=50
+    Dt = 65000* 10**-7 
+    dt_list = [10**-8,10**-7,10**-6,10**-5]
+    #dt_list = [10**-7]
+    duration_list=[]
+    last_frame_data = []
+    for dt in dt_list:
+        start = time.time()
+        u0 = np.zeros((N,N))
+
+        v0 = np.copy(u0)
+        u0,v0 = set_boundary(u0,v0,Ns_c, Nc_lw)
+        u, v = np.copy(u0), np.copy(v0)
+        dt = 1e-7
+        u, v,P = advance_fluid_flow(int(Dt/dt), u, v, advance_adv_diff_RK3, dt)
+        last_frame_data.append([u,v,P])
+        end = time.time()
+        duration_list.append(start-end)
+    
+    try:
+        res = pickle.load(open("./data/other/dt_vs_Dur+convergence.p","rb"))
+        for i in range(len(dt_list)):
+            if dt_list[i] not in res["dt"]:
+                res["dt" ]      .append(dt_list[i])
+                res["Dur"]     .append(duration_list[i])
+                res["lstFrame"].append(last_frame_data[i])
+        pickle.dump(res,open("./data/other/dt_vs_Dur+convergence.p","wb"))
+    except:
+        pickle.dump({
+        "dt": dt_list,
+        "Dur":duration_list,
+        "lstFrame":last_frame_data,
+        "conv":None,
+        "info":"dt->time step\nDur->simulation duration\nlstFrame->last frame data\nconv->is convergent"
+            } , open("./data/other/dt_vs_Dur+convergence.p","wb"))
+
