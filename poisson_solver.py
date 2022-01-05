@@ -14,6 +14,7 @@ def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000):
     """
 
     N,M = b.shape
+    is_convergent=True
 
     # if the pressure field at the previous iteration is not too different,
     # the algorithm might converge faster
@@ -75,7 +76,7 @@ def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000):
             break
         if n > maxit:
             print('did not converge within the maximum number of iterations')
+            is_convergent = False
             break
         n += 1
-
-    return Pact
+    return Pact,is_convergent

@@ -71,7 +71,7 @@ def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None):
         u,v = set_boundary(u,v, Ns_c, Nc_lw)
 
         # NOTE: using Pprev here increases Poisson solver convergence speed a lot!
-        P = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol)
+        P,is_convergent = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol)
 
         # third step (P)
         dPdx = df1_2(P, dx, axis=0)
@@ -79,10 +79,11 @@ def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None):
 
         u = u - dt / rho * dPdx
         v = v - dt / rho * dPdy
-
+        if not is_convergent:
+            break
         # apply BCs one more at the end?
         #u,v = set_boundary(u,v)
-    return u, v, P
+    return u,v,P,is_convergent
 
 def dt_fluid_flow(dx, Fo=0.3):
     """
