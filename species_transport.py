@@ -2,7 +2,7 @@ from numba import jit
 from scipy.constants import N_A ,m_p
 from numpy import exp
 import numpy as np
-
+from Funcs import advance_adv_diff_RK4
 from parameters import *
 
 species_names = ['CH$_4$', 'O$_2$', 'N$_2$',  'H$_2$O', 'CO$_2$']
@@ -195,16 +195,16 @@ def integr_chem_0d(Y, T, dt, Nt_chem):
     return Y, T_t
 
 @jit(nopython=True)
-def integr_chem_2d(Y, T, dt, Nt_chem, evolve_T=True):
+def integr_chem_2d(Y, T, dt, dt_chem, evolve_T=True):
     """
     Integration of the chemistry equations for the whole chamber.
     Args:
         - Y:  mass fraction of species k
         - T:  Temperature in K
         - dt: integrates the chemical equation from t to t+dt
-        - Nt_chem: number of time steps for the integration (dt_chem = dt/Nt_chem)
+        - dt_chem: time step for the integration (dt_chem = dt/Nt_chem)
     """
-    dt_chem = dt / Nt_chem
+    Nt_chem = dt // dt_chem
 
     for n in range(Nt_chem):
         n = Y_to_n(Y)
@@ -222,3 +222,93 @@ def integr_chem_2d(Y, T, dt, Nt_chem, evolve_T=True):
             T += dt_chem * omegaT_dot / rho / cp
 
     return Y, T
+
+
+@jit(nopython=True)
+def evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=True, dt_chem=None, evolve_T=True):
+
+    nspec = Y.shape[0]
+    Y = set_BCs(Y, Ns_c, Nc_lw)
+    T = set_Temp_BC(T, Ns_c, Nc_lw)
+
+    if dt_chem is None:
+        dt_chem = dt // 100
+
+    for n in range(Nt):
+        if chem:
+            Y, _ = integr_chem_2d(Y, T, dt, dt_chem, evolve_T)
+        if evolve_T:
+            T = _
+            # (almost) same procedure for temperature as for species:
+            T = advance_adv_diff_RK4(T, dt, u, v, dx, dy, nu)
+            T = set_Temp_BC(T, Ns_c, Nc_lw)
+
+        for k in range(nspec):
+
+            if k < nspec-1:
+                Y[k] = advance_adv_diff_RK4(Y[k], dt, u, v, dx, dy, nu)
+            else:
+                # normalization condition:
+                Y[k] = 1 + Y[k] - np.sum(Y, axis=0)
+        Y = set_BCs(Y, Ns_c, Nc_lw)
+
+    return Y, T
+
+"""
+# Here are just old versions of the function kept as a backup (they were from the notebooks pre-combustion and combustion)
+@jit(nopython=True)
+def evolve_species(Nt, Y, T):
+
+    nspec = Y.shape[0]
+    Y = set_BCs(Y, Ns_c, Nc_lw)
+
+    for n in range(Nt):
+        for k in range(nspec):
+
+            if k < nspec-1:
+                Y[k] = advance_adv_diff_RK4(Y[k], dt, u, v, dx, dy, nu)
+
+            else:
+                # normalization condition:
+                Y[k] = 1 + Y[k] - np.sum(Y, axis=0)
+
+        # apply BCs
+        Y = set_BCs(Y, Ns_c, Nc_lw)
+        T = set_Temp_BC(T, Ns_c, Nc_lw)
+
+        #Y_t[:,:,:,n] = Y
+        #T_t[:,:,n]   = T
+
+    return Y, T
+
+@jit(nopython=True)
+def evolve_species_revisited(Nt, Y, T, evolve_T=True):
+
+    nspec = Y.shape[0]
+    Y = set_BCs(Y, Ns_c, Nc_lw)
+    T = set_Temp_BC(T, Ns_c, Nc_lw)
+
+    for n in range(Nt):
+
+        Nt_chem = 100 if evolve_T else 100
+        Y, _ = integr_chem_2d(Y, T, dt, Nt_chem, evolve_T)
+        if evolve_T:
+            T = _
+
+            # (almost) same procedure for temperature as for species:
+            T = advance_adv_diff_RK4(T, dt, u, v, dx, dy, nu)
+            T = set_Temp_BC(T, Ns_c, Nc_lw)
+
+        for k in range(nspec):
+
+            if k < nspec-1:
+                Y[k] = advance_adv_diff_RK4(Y[k], dt, u, v, dx, dy, nu)
+
+            else:
+                # normalization condition:
+                Y[k] = 1 + Y[k] - np.sum(Y, axis=0)
+
+        Y = set_BCs(Y, Ns_c, Nc_lw)
+
+    return Y, T
+"""
