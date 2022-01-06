@@ -232,7 +232,7 @@ def evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=True, dt_chem=N
     T = set_Temp_BC(T, Ns_c, Nc_lw)
 
     if dt_chem is None:
-        dt_chem = dt // 100
+        dt_chem = dt / 100
 
     for n in range(Nt):
         if chem:
@@ -312,3 +312,17 @@ def evolve_species_revisited(Nt, Y, T, evolve_T=True):
 
     return Y, T
 """
+
+def set_up_T(N,M, dy, Tcent=1000, T0=300, d=0.5e-3, smooth=False):
+    """Set up the fixed high temperature in the center to initiate the combustion"""
+    from Funcs import tanh_transition
+    if smooth:
+        T = tanh_transition(np.arange(M), 0, 1, M/2-d/dy, d/dy/4)
+        T *= tanh_transition(np.arange(M), 1, 0, M/2+d/dy, d/dy/4)
+    else:
+        T = np.zeros(M)
+        T[int(M/2-d/dy) : int(M/2+d/dy) + 1] = 1
+    T = (Tcent - T0) * T + T0
+    T = np.reshape(T, (1, -1))
+    T = T.repeat(N, axis=0)
+    return T
