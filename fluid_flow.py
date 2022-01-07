@@ -144,3 +144,48 @@ def advance_fluid_flow_2(Nt, u, v, f, dt, w=None, atol=1e-4, P=None):
         # apply BCs one more at the end?
         #u,v = set_boundary(u,v)
     return UVP,is_convergent
+
+
+def produce_final_data(N_list=None, atol=5e-8, t=0.015):
+    from pathlib import Path
+    import time
+    import parameters
+    from Funcs import advance_adv_diff_RK3
+
+    if N_list is None:
+        N_list = np.array([30,50,70,90,100,120,130,140,180,200,250])
+
+    chrono = np.zeros((N_list.size))
+
+    for i in range(N_list.size):
+
+        N = N_list[i]
+        M = N_list[i]
+
+        print('working on {}'.format(N))
+        dx, dy, Ns_c, Nc_lw = parameters.set_resolution(N,M)
+        dt = dt_fluid_flow(dx, Fo=0.3)
+
+        # w parameter for the Poisson solver:
+        w = 2 / (1 + sin(pi/N))
+
+        # number of iterations
+        Nt = int(t/dt)
+
+        # initial setup of the fields u,v and P
+        u0 = np.zeros((N,N))
+        v0 = np.copy(u0)
+        u0,v0 = set_boundary(u0,v0,Ns_c, Nc_lw)
+        u, v = np.copy(u0), np.copy(v0)
+
+        t0 = time.time()
+
+        # iterate:
+        u, v, P, _ = advance_fluid_flow(Nt, u, v, advance_adv_diff_RK3, dt, w=w, atol=atol)
+
+        chrono[i] = time.time() - t0
+
+        datap = Path('data/vel_field') / 'UVP_N{}.npy'.format(N)
+        np.save(datap, np.array([u,v,P]))
+
+    return chrono

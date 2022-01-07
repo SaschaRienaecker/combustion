@@ -277,3 +277,11 @@ def tanh_transition(x, y1, y2, a, b):
     """
     y = y1 + (y2 - y1) * 0.5 * (1 + tanh((x - a) / b))
     return y
+
+def metric_L0(a, b):
+    norm = np.abs(a).max()
+    return np.abs(a-b).max() / norm
+
+def metric_RMS(a, b):
+    norm = np.abs(a).max()
+    return np.sqrt(np.mean((a-b)**2)) / norm

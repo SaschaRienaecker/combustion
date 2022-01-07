@@ -2,7 +2,7 @@ from numba import jit
 from scipy.constants import N_A ,m_p
 from numpy import exp
 import numpy as np
-from Funcs import advance_adv_diff_RK4
+from Funcs import advance_adv_diff_RK3, advance_adv_diff_RK4
 from parameters import *
 
 species_names = ['CH$_4$', 'O$_2$', 'N$_2$',  'H$_2$O', 'CO$_2$']
@@ -240,13 +240,13 @@ def evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=True, dt_chem=N
         if evolve_T:
             T = _
             # (almost) same procedure for temperature as for species:
-            T = advance_adv_diff_RK4(T, dt, u, v, dx, dy, nu)
+            T = advance_adv_diff_RK3(T, dt, u, v, dx, dy, nu)
             T = set_Temp_BC(T, Ns_c, Nc_lw)
 
         for k in range(nspec):
 
             if k < nspec-1:
-                Y[k] = advance_adv_diff_RK4(Y[k], dt, u, v, dx, dy, nu)
+                Y[k] = advance_adv_diff_RK3(Y[k], dt, u, v, dx, dy, nu)
             else:
                 # normalization condition:
                 Y[k] = 1 + Y[k] - np.sum(Y, axis=0)
