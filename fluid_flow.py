@@ -94,3 +94,53 @@ def dt_fluid_flow(dx, Fo=0.3):
     """
     dt = dx**2 / nu * Fo
     return dt
+
+@jit(nopython=True)
+def advance_fluid_flow_2(Nt, u, v, f, dt, w=None, atol=1e-4, P=None):
+    """
+    This is the same but only keeps the previous data
+    Evolve the fluid velocities u,v, according the incompressible N.-V.-Eqs
+    over Nt time steps of duration dt.
+    Note: the first time this function is executed takes long since numba needs to compile a lot).
+    Args:
+    - f: Time integration function, e.g. advance_adv_diff_RK3
+    - P: Initial pressure field. Defaults to zeros if not provided.
+    """
+    UVP = np.zeros((Nt+1,3,*v.shape)) #data cube
+    UVP[0,0,:] = u
+    UVP[0,1,:] = v
+    if P is None:
+        P = np.zeros_like(u)
+        UVP[0,2,:] = P
+
+    N, M = u.shape
+
+    dx, dy, Ns_c, Nc_lw = set_resolution(N,M)
+
+    if w is None:
+        w = 2 / (1 + sin(pi/N)) # optimal SOR parameter in the symmatrical case NxN
+
+    for n in range(Nt):
+
+        u = f(u, dt, u, v, dx, dy, nu)
+        v = f(v, dt, u, v, dx, dy, nu)
+        u,v = set_boundary(u,v, Ns_c, Nc_lw)
+
+        # NOTE: using Pprev here increases Poisson solver convergence speed a lot!
+        P,is_convergent = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol)
+
+        # third step (P)
+        dPdx = df1_2(P, dx, axis=0)
+        dPdy = df1_2(P, dx, axis=1)
+
+        u = u - dt / rho * dPdx
+        v = v - dt / rho * dPdy
+        UVP[n+1,0,:] = u
+        UVP[n+1,1,:] = v
+        UVP[n+1,2,:] = P
+
+        if not is_convergent:
+            break
+        # apply BCs one more at the end?
+        #u,v = set_boundary(u,v)
+    return UVP,is_convergent
