@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 @jit(nopython=True)
-def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000):
+def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000, n_conv_check=1):
     """
     Solve the elliptic pressure equation (formally identical to te Poisson eq.):
     ΔP = b (Δ is normalized 2D Laplace operator discretized using centered
@@ -58,8 +58,9 @@ def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000):
         return dP, _b
 
     n = 0
+    Pold = np.copy(Pact) # needed to check the convergence
+
     while True:
-        Pold = np.copy(Pact) # needed to check the convergence
 
         """arguments: w between 0 and 2
         Return x a vector of the same size of a"""
@@ -71,12 +72,29 @@ def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000):
             for j in range(M):
                 dP, _b = dP_BC(i,j)
                 Pact[i,j] = (1-w) * Pact[i,j] + w * (1/4 * dP - 1/4 * _b)
+        
+        # here, we check convergence every `n_conv_check` steps:
+        if n % n_conv_check==0:
+            if converged(Pold, Pact):
+                break
+            Pold = np.copy(Pact)
 
-        if converged(Pold, Pact):
-            break
         if n > maxit:
             print('did not converge within the maximum number of iterations')
             is_convergent = False
             break
         n += 1
+    #print(n)
     return Pact,is_convergent
+
+@jit(nopython=True)
+def _get_atol(t, amin, amax, tmax):
+    """
+    Exponentially ramp down atol from amax (at t=0) to amin (for t>tmax).
+    """
+    s = np.log(amax/amin)
+    if t<tmax:
+        return amin * np.exp( - s * t / tmax + s)
+    else:
+        return amin
+get_atol = np.vectorize(_get_atol)

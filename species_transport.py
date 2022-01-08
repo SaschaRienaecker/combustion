@@ -4,6 +4,8 @@ from numpy import exp
 import numpy as np
 from Funcs import advance_adv_diff_RK3, advance_adv_diff_RK4
 from parameters import *
+from pathlib import Path
+from fluid_flow import dt_fluid_flow
 
 species_names = ['CH$_4$', 'O$_2$', 'N$_2$',  'H$_2$O', 'CO$_2$']
 
@@ -254,65 +256,6 @@ def evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=True, dt_chem=N
 
     return Y, T
 
-"""
-# Here are just old versions of the function kept as a backup (they were from the notebooks pre-combustion and combustion)
-@jit(nopython=True)
-def evolve_species(Nt, Y, T):
-
-    nspec = Y.shape[0]
-    Y = set_BCs(Y, Ns_c, Nc_lw)
-
-    for n in range(Nt):
-        for k in range(nspec):
-
-            if k < nspec-1:
-                Y[k] = advance_adv_diff_RK4(Y[k], dt, u, v, dx, dy, nu)
-
-            else:
-                # normalization condition:
-                Y[k] = 1 + Y[k] - np.sum(Y, axis=0)
-
-        # apply BCs
-        Y = set_BCs(Y, Ns_c, Nc_lw)
-        T = set_Temp_BC(T, Ns_c, Nc_lw)
-
-        #Y_t[:,:,:,n] = Y
-        #T_t[:,:,n]   = T
-
-    return Y, T
-
-@jit(nopython=True)
-def evolve_species_revisited(Nt, Y, T, evolve_T=True):
-
-    nspec = Y.shape[0]
-    Y = set_BCs(Y, Ns_c, Nc_lw)
-    T = set_Temp_BC(T, Ns_c, Nc_lw)
-
-    for n in range(Nt):
-
-        Nt_chem = 100 if evolve_T else 100
-        Y, _ = integr_chem_2d(Y, T, dt, Nt_chem, evolve_T)
-        if evolve_T:
-            T = _
-
-            # (almost) same procedure for temperature as for species:
-            T = advance_adv_diff_RK4(T, dt, u, v, dx, dy, nu)
-            T = set_Temp_BC(T, Ns_c, Nc_lw)
-
-        for k in range(nspec):
-
-            if k < nspec-1:
-                Y[k] = advance_adv_diff_RK4(Y[k], dt, u, v, dx, dy, nu)
-
-            else:
-                # normalization condition:
-                Y[k] = 1 + Y[k] - np.sum(Y, axis=0)
-
-        Y = set_BCs(Y, Ns_c, Nc_lw)
-
-    return Y, T
-"""
-
 def set_up_T(N,M, dy, Tcent=1000, T0=300, d=0.5e-3, smooth=False):
     """Set up the fixed high temperature in the center to initiate the combustion"""
     from Funcs import tanh_transition
@@ -326,3 +269,36 @@ def set_up_T(N,M, dy, Tcent=1000, T0=300, d=0.5e-3, smooth=False):
     T = np.reshape(T, (1, -1))
     T = T.repeat(N, axis=0)
     return T
+
+
+def compute_Y_pre_combustion(N, u, v, t=0.04):
+    
+    dx, dy, Ns_c, Nc_lw = set_resolution(N,N)
+    dt = dt_fluid_flow(dx, Fo=0.3)
+
+    # number of iterations
+    Nt = int(t/dt)
+    
+    # initial setup of the species distribution
+    CH4, O2, N2, H2O, CO2, T = np.zeros((6,N,N))
+    O2[:] = .233
+    N2[:] = .767
+    T[:] = 300
+    Y = np.array([CH4, O2, N2, CO2, H2O])
+    
+    # iterate:
+    Y, T = evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=False, evolve_T=False)
+    
+    return Y,T
+
+def save_Y_T(Y,T,p):
+    species_data = np.zeros((Y.shape[0] + 1, *Y.shape[1:]))
+    species_data[:-1,:, :] = Y
+    species_data[-1, :, :] = T
+    np.save(p, species_data)
+
+def load_Y_T(p):
+    species_data = np.load(p)
+    Y = species_data[:-1,:, :]
+    T = species_data[-1, :, :]
+    return Y,T
