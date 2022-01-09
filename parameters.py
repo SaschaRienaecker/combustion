@@ -23,8 +23,8 @@ Ucoflow = .2 # coflow speed in m/s
 
 @jit(nopython=True)
 def set_resolution(N, M):
-    dx      = Lx/N
-    dy      = Ly/M
+    dx      = Lx/(N-1)
+    dy      = Ly/(M-1)
     Ns_c    = int(Lslot          /dx) #N for the point between the slot and te coflow
     Nc_lw   = int((Lslot+Lcoflow)/dx) #N for the point between the coflow and the rest of the wall
     return dx, dy, Ns_c, Nc_lw

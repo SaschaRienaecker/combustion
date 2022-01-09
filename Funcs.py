@@ -260,3 +260,28 @@ def diffusion(p, dx, dy, nu):
 def advance_diff_RK3(p, dt, u, v, dx, dy, nu):
     args = (dx, dy, nu)
     return RK3(p, dt, diffusion, *args)
+
+def tanh_transition(x, y1, y2, a, b):
+    from numpy import tanh
+    """ Hyperbolic tangent transition between two values y1, y2
+    at a point a, with width b.
+    Args:
+        x (float or array-like):
+            coordinates on which to evaluate this function.
+        y1, y2 (float): values at -/+ infinity
+        a (float): transition point, i.e. y''(a) = 0
+        b (float): determines how smooth the transition is: high b -> sharp transition
+    Returns:
+        y (float or array-like):
+            the function evaluated at point(s) x
+    """
+    y = y1 + (y2 - y1) * 0.5 * (1 + tanh((x - a) / b))
+    return y
+
+def metric_L0(a, b):
+    norm = np.abs(a).max()
+    return np.abs(a-b).max() / norm
+
+def metric_RMS(a, b):
+    norm = np.abs(a).max()
+    return np.sqrt(np.mean((a-b)**2)) / norm
