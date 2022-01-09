@@ -169,12 +169,12 @@ def produce_final_data(N_list=None, *compute_args):
         
         Chrono[i] = time.time() - t0
         
-        datap = Path('data/vel_field') / 'UVP_N{}.npy'.format(N)
+        datap = Path('data/vel_field/test0') / 'UVP_N{}.npy'.format(N)
         np.save(datap, np.array([u,v,P]))
 
     return Chrono
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def compute_UVP(N, t=0.015, atol_params=(1e-8, 1e-4, 0.01), Nt_seg=10):
     """
     Compute the stationnary velocity u,v (and pressure P) fields for a given grid size N (N=M).
@@ -185,6 +185,8 @@ def compute_UVP(N, t=0.015, atol_params=(1e-8, 1e-4, 0.01), Nt_seg=10):
     """
     dx, dy, Ns_c, Nc_lw = parameters.set_resolution(N,N)
     dt = dt_fluid_flow(dx, Fo=0.3)
+    
+    print(Nt_seg)
 
     # w parameter for the Poisson solver:
     w = 2 / (1 + sin(pi/N))
@@ -194,7 +196,8 @@ def compute_UVP(N, t=0.015, atol_params=(1e-8, 1e-4, 0.01), Nt_seg=10):
 
     # we don't need to check the convergence of the Poisson solver at each iteration (of the P.Solver),
     # this will allow to save some time as N becomes large (here, we chose n_conv_check=1 for N=30)
-    n_conv_check = int(8.9e-5/dt)
+    n_conv_check = int(np.round(8.9e-5/dt))
+    print(n_conv_check)
 
     # initial setup of the fields u,v and P
     u0 = np.zeros((N,N))

@@ -291,6 +291,40 @@ def compute_Y_pre_combustion(N, u, v, t=0.04):
     
     return Y,T
 
+def compute_Y_combustion(N, u, v, Y, T, t=0.03):
+    """
+    Combustion step at fixed Temperature.
+    """
+    
+    dx, dy, Ns_c, Nc_lw = set_resolution(N,N)
+    dt = dt_fluid_flow(dx, Fo=0.3)
+
+    # number of iterations
+    Nt = int(t/dt)
+    
+    # iterate:
+    Y, T = evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=True, dt_chem=6.4e-7, evolve_T=False)
+    
+    return Y,T
+
+def compute_Y_combustion_with_T(N, u, v, Y, T, t=0.03):
+    """
+    Final combustion step with evolution of T.
+    """
+    
+    dx, dy, Ns_c, Nc_lw = set_resolution(N,N)
+    dt = dt_fluid_flow(dx, Fo=0.3)
+    dt_chem = get_dt_chem(N)
+
+    # number of iterations
+    Nt = int(t/dt)
+    
+    # iterate:
+    Y, T = evolve_species(Nt, Y, T, dt, u, v, dx, dy, Ns_c, Nc_lw, chem=True, dt_chem=dt_chem, evolve_T=True)
+    
+    return Y,T
+
+
 def save_Y_T(Y,T,p):
     species_data = np.zeros((Y.shape[0] + 1, *Y.shape[1:]))
     species_data[:-1,:, :] = Y
@@ -302,3 +336,28 @@ def load_Y_T(p):
     Y = species_data[:-1,:, :]
     T = species_data[-1, :, :]
     return Y,T
+
+@jit(nopython=True)
+def get_dt_chem(N):
+    """
+    Returns time step in [s] for chemistry integration (with T evolution), obtained from
+    a linear fit at stability threshold (tested for evolve_species with evolve_T=True
+    and it works for both RK3 and RK4). 
+    There are exceptions from the linear behavior
+        - at N=50, no explanation yet (workaround: reduce dt_chem by factor 0.8)
+        - beyond N=130; it seems that dt_chem cannot be higher than ~dt/6 (which corresponds to N=130)
+    """
+    dt_chem = 5.121e-9 * N - 1.115e-7
+    
+    
+    dx, dy, Ns_c, Nc_lw = set_resolution(N,N)
+    dt = dt_fluid_flow(dx, Fo=0.3)
+    
+    if dt_chem > dt/6:
+        return dt/6
+    else:
+    
+        if N>30 and N<70:
+            return 0.8 * dt_chem
+        else:
+            return dt_chem
