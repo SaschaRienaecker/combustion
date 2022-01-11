@@ -1,40 +1,50 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from species_transport import species_names
+from species_transport import species_names_2
+from parameters import *
 
 def plot_species_overview(Y, T, axs=None):
 
     nsp = Y.shape[0]
     if axs is None:
-        fig, axs =plt.subplots(2, 4, figsize=(8,6),sharex=True, sharey=True)
+        fig, axs =plt.subplots(2, 3, figsize=(6,6),sharex=True, sharey=True)
     else:
         fig = axs[0,0].get_figure()
+        
+    axs[-1,0].set_xlabel('$x$ [mm]')
+    #axs[0,0].set_ylabel('$y$ [mm]')
+    axs[-1,0].set_ylabel('$y$ [mm]')
+    
 
     axs = axs.flatten()
-    np.arange(nsp+1)
 
-    for k in np.arange(nsp+2):
+    for k in np.arange(nsp+1):
         if k==nsp:
             dat = T.T
-            title = 'temperature [K]'
+            title = 'Temperature' # '$T$ [K]'
             vmin,vmax=0,T.max()
             cmap = 'hot'
         elif k==nsp+1:
             dat = np.sum(Y, axis=0).T
-            title = r'$\Sigma_i{Y_i}$'
+            title = r'$\Sigma_k{Y_k}$'
             vmin,vmax=0,2
             cmap = 'seismic'
         else:
             dat = Y[k].T
-            title = species_names[k]
+            title = 'Y_{' + species_names_2[k] + '}'
+            title = r'${}$'.format(title)
             vmin, vmax=0,1
             cmap = 'seismic'
 
-        im = axs[k].imshow(dat, cmap=cmap, origin='lower', aspect='auto', vmin=vmin, vmax=vmax)
+        im = axs[k].imshow(dat, cmap=cmap, origin='lower', aspect='auto', vmin=vmin, vmax=vmax, extent=(0,Lx*1e3,0,Ly*1e3))
         axs[k].set_title(title)
-        fig.colorbar(im, ax=axs[k], location='bottom')
+        if k==2:
+            fig.colorbar(im, ax=axs[k], location='right', label='$Y_k$')
+        elif k==nsp:
+            fig.colorbar(im, ax=axs[k], location='right', label='$T$ [K]')
 
-    fig.suptitle(r'Species concentration / temperature field /$\Sigma_i{Y_i}$')
+            
+    #fig.suptitle(r'Mass fractions $Y_k$ of species $k$ / temperature $T$')
     plt.tight_layout()
 
 def plot_velocity_image(u,v,u0,v0,axs=None):

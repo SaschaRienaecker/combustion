@@ -1,0 +1,14 @@
+text.usetex: True
+font.family: serif
+axes.labelsize: 10
+font.size: 9
+legend.fontsize: 9
+xtick.labelsize: 8
+ytick.labelsize: 8
+lines.markersize: 2.5
+lines.linewidth: 1.2
+
+ytick.direction: in
+xtick.direction: in
+
+savefig.bbox: tight
