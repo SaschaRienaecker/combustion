@@ -8,6 +8,7 @@ from pathlib import Path
 from fluid_flow import dt_fluid_flow
 
 species_names = ['CH$_4$', 'O$_2$', 'N$_2$',  'H$_2$O', 'CO$_2$']
+species_names_2 = ['CH_4', 'O_2', 'N_2',  'H_2O', 'CO_2']
 
 mH = 1.0079
 mO = 16.000
