@@ -84,3 +84,47 @@ def plot_velocity_vector_field(u, v, ax=None):
         ax.set_ylabel('$y$')
 
     ax.quiver(u.T, v.T)
+
+def plot_station_analysis(L0, L2, Nt, Nt0, N_loop, dt, dt_measure, axs=None):
+    
+    t = np.arange(N_loop) * dt * Nt + dt * Nt0
+    
+    if axs is None:
+        fig, [ax, ax2] = plt.subplots(1,2, figsize=(8,4), sharex=True, sharey=True)
+    else:
+        ax, ax2 = axs
+        
+    from species_transport import species_names
+
+    for i in range(L0.shape[0]):
+        ax.plot(t* 1e3, L0[i], label=species_names[i])
+        ax2.plot(t * 1e3, L2[i], label=species_names[i])
+
+    ax.set_xlabel('t [ms]')
+    ax2.set_xlabel('t [ms]')
+    if True:
+        ax.set_yscale('log')
+        ax2.set_yscale('log')
+        #ax.set_xscale('log')
+        #ax2.set_xscale('log')
+
+    #ax.set_title(r'$\Delta \tilde{Y} = \frac{ max ( |\phi_n - \phi_{n+1}| ) } { max |\phi_n| }$')
+    #ax2.set_title(r'$\Delta \hat{Y} = RMS ( Y_n - Y_{n+1} ) / max |Yn| $')
+
+    ax.set_title(r'metric 1')
+    ax2.set_title(r'metric 2')
+    
+    ax.get_figure().suptitle(r'Relative variations of $Y_k$ over $\tau = t_{n+1} - t_n = $' +'${:.2f}$ ms'.format(dt_measure * 1e3))
+    s = r'$\Delta \hat{Y} = \frac{ max ( |Y_n -  Y_{n+1}| ) }{ max |Y_n| }$'
+    #s += '\n'
+    #s += r'$\tau = t_{n+1} - t_n = $' +'${:.2f}$ ms'.format(dt_measure * 1e3)
+    ax.text(0.95, 0.95, s, verticalalignment='top', horizontalalignment='right', transform=ax.transAxes)
+    ax2.text(0.95, 0.95, r'$\Delta \hat{Y} = \frac{ RMS ( Y_n - Y_{n+1} ) }{ max |Yn| }$', verticalalignment='top', horizontalalignment='right', transform=ax2.transAxes)
+    for a in [ax, ax2]:
+        a.axhline(1e-6, ls='--')
+        a.set_xlim(left=1e-3)
+        #a.plot(T, get_atol(T, amin, amax, tmax), label='atol')
+    ax.legend(loc='lower left')
+    #ax.set_ylabel(r'$\Delta \hat{Y} / \tau$ [(ms)$^{-1}$]')
+    ax.set_ylabel(r'$\Delta \hat{Y}$')
+    #ax.axvline(40, ls='--')
