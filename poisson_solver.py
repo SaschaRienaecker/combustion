@@ -85,7 +85,7 @@ def SOR_solver(b, Pprev=None, w=1, atol=1e-4, maxit=1000000, n_conv_check=1):
             break
         n += 1
     #print(n)
-    return Pact,is_convergent
+    return Pact,is_convergent,n
 
 @jit(nopython=True)
 def _get_atol(t, amin, amax, tmax):

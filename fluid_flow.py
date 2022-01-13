@@ -45,7 +45,7 @@ def compute_P(u, v, dx, dt, rho, Pprev=None, w=1.5, atol=1e-4, n_conv_check=1):
     return SOR_solver(b, Pprev=Pprev, w=w, atol=atol, maxit=10000, n_conv_check=n_conv_check)
 
 @jit(nopython=True)
-def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=1):
+def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=1, diag=False):
     """
     Evolve the fluid velocities u,v, according the incompressible N.-V.-Eqs
     over Nt time steps of duration dt.
@@ -63,6 +63,8 @@ def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=
 
     if w is None:
         w = 2 / (1 + sin(pi/N)) # optimal SOR parameter in the symmatrical case NxN
+    
+    NSOR = np.zeros(Nt)
 
     for n in range(Nt):
 
@@ -71,7 +73,7 @@ def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=
         u,v = set_boundary(u,v, Ns_c, Nc_lw)
 
         # NOTE: using Pprev here increases Poisson solver convergence speed a lot!
-        P,is_convergent = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol, n_conv_check=n_conv_check)
+        P,is_convergent,nSOR = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol, n_conv_check=n_conv_check)
 
         # third step (P)
         dPdx = df1_2(P, dx, axis=0)
@@ -79,11 +81,17 @@ def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=
 
         u = u - dt / rho * dPdx
         v = v - dt / rho * dPdy
+        
+        # save some diagnostics if necessary:
+        if diag:
+            NSOR[n] = nSOR
+        
         if not is_convergent:
             break
         # apply BCs one more at the end?
         #u,v = set_boundary(u,v)
-    return u,v,P,is_convergent
+    
+    return u,v,P,is_convergent, NSOR
 
 @jit(nopython=True)
 def dt_fluid_flow(dx, Fo=0.3):
@@ -169,7 +177,7 @@ def produce_final_data(N_list=None, *compute_args):
         
         Chrono[i] = time.time() - t0
         
-        datap = Path('data/vel_field/test0') / 'UVP_N{}.npy'.format(N)
+        datap = Path('data/vel_field/test_perfo') / 'UVP_N{}.npy'.format(N)
         np.save(datap, np.array([u,v,P]))
 
     return Chrono
@@ -186,8 +194,6 @@ def compute_UVP(N, t=0.015, atol_params=(1e-8, 1e-4, 0.01), Nt_seg=10):
     dx, dy, Ns_c, Nc_lw = parameters.set_resolution(N,N)
     dt = dt_fluid_flow(dx, Fo=0.3)
     
-    print(Nt_seg)
-
     # w parameter for the Poisson solver:
     w = 2 / (1 + sin(pi/N))
 
@@ -196,8 +202,8 @@ def compute_UVP(N, t=0.015, atol_params=(1e-8, 1e-4, 0.01), Nt_seg=10):
 
     # we don't need to check the convergence of the Poisson solver at each iteration (of the P.Solver),
     # this will allow to save some time as N becomes large (here, we chose n_conv_check=1 for N=30)
-    n_conv_check = int(np.round(8.9e-5/dt))
-    print(n_conv_check)
+    #n_conv_check = int(np.round(8.9e-5/dt))
+    #print(n_conv_check)
 
     # initial setup of the fields u,v and P
     u0 = np.zeros((N,N))
@@ -205,14 +211,21 @@ def compute_UVP(N, t=0.015, atol_params=(1e-8, 1e-4, 0.01), Nt_seg=10):
     u0,v0 = set_boundary(u0,v0,Ns_c, Nc_lw)
     u, v = np.copy(u0), np.copy(v0)
     P = np.zeros_like(u)
+    
+    # time in [s] between two measurements
+    dt_measure = t / 100
 
+    # number of iterations between 2 convergence measurements
+    Nt_seg = int(dt_measure / dt)
+    
     # iterate: (Nt%Nt_seg is the rest of the division Nt//Nt_seg, so we just, make sure to iterate EXACTLY Nt times in total)
     atol = _get_atol(0, *atol_params)
-    u, v, P, _ = advance_fluid_flow(Nt%Nt_seg, u, v, advance_adv_diff_RK3, dt, w=w, P=P, atol=atol, n_conv_check=n_conv_check)
+    u, v, P, _,_ = advance_fluid_flow(Nt%Nt_seg, u, v, advance_adv_diff_RK3, dt, w=w, P=P, atol=atol, n_conv_check=1)
+    
 
     for j in range(Nt//Nt_seg):
         t = dt * (j * Nt_seg + Nt%Nt_seg)
         atol = _get_atol(t, *atol_params)
-        u, v, P, _ = advance_fluid_flow(Nt_seg, u, v, advance_adv_diff_RK3, dt, w=w, P=P, atol=atol, n_conv_check=n_conv_check)
+        u, v, P, _,_ = advance_fluid_flow(Nt_seg, u, v, advance_adv_diff_RK3, dt, w=w, P=P, atol=atol, n_conv_check=1)
 
     return u, v, P
