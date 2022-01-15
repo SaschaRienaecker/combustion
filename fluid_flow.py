@@ -36,16 +36,16 @@ def set_boundary(u,v, Ns_c, Nc_lw):
 
 
 @jit(nopython=True)
-def compute_P(u, v, dx, dt, rho, Pprev=None, w=1.5, atol=1e-4, n_conv_check=1):
+def compute_P(u, v, dx, dt, rho, Pprev=None, w=1.5, atol=1e-4, n_conv_check=1, maxit=10000):
     # no need to compute dvdx or dudy
     dudx = df1_2(u, dx, axis=0)
     dvdy = df1_2(v, dx, axis=1)
     b = dx**2 * rho / dt * (dudx + dvdy)
 
-    return SOR_solver(b, Pprev=Pprev, w=w, atol=atol, maxit=10000, n_conv_check=n_conv_check)
+    return SOR_solver(b, Pprev=Pprev, w=w, atol=atol, maxit=maxit, n_conv_check=n_conv_check)
 
 @jit(nopython=True)
-def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=1, diag=False):
+def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=1, diag=False, maxit=10000):
     """
     Evolve the fluid velocities u,v, according the incompressible N.-V.-Eqs
     over Nt time steps of duration dt.
@@ -73,7 +73,7 @@ def advance_fluid_flow(Nt, u, v, f, dt, w=None, atol=1e-4, P=None, n_conv_check=
         u,v = set_boundary(u,v, Ns_c, Nc_lw)
 
         # NOTE: using Pprev here increases Poisson solver convergence speed a lot!
-        P,is_convergent,nSOR = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol, n_conv_check=n_conv_check)
+        P,is_convergent,nSOR = compute_P(u, v, dx, dt, rho, Pprev=P, w=w, atol=atol, n_conv_check=n_conv_check, maxit=maxit)
 
         # third step (P)
         dPdx = df1_2(P, dx, axis=0)
